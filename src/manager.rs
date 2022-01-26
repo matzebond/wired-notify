@@ -9,6 +9,9 @@ use winit::{
     event_loop::EventLoopWindowTarget, window::WindowId,
 };
 
+use std::fs::File;
+use std::io::BufReader;
+
 use crate::{
     //notification::Notification,
     bus,
@@ -29,6 +32,8 @@ pub struct NotifyWindowManager {
     pub dirty: bool,
 
     idle_check_timer: f32,
+    audio_stream: rodio::OutputStream,
+    audio_handle: rodio::OutputStreamHandle,
 }
 
 impl NotifyWindowManager {
@@ -45,6 +50,10 @@ impl NotifyWindowManager {
             .build(el)
             .expect("Failed to create base window.");
 
+
+        let (stream, handle) = rodio::OutputStream::try_default()
+            .expect("Failed to get default audio output stream.");
+
         Self {
             base_window,
             layout_windows,
@@ -52,6 +61,8 @@ impl NotifyWindowManager {
             dirty: false,
 
             idle_check_timer: 0.0,
+            audio_stream: stream,
+            audio_handle: handle,
         }
     }
 
@@ -73,6 +84,14 @@ impl NotifyWindowManager {
                 let cfg = Config::get();
                 if cfg.max_notifications > 0 && windows.len() > cfg.max_notifications {
                     windows.first_mut().unwrap().marked_for_destroy = true;
+                }
+
+                if let Some(ref path) = notification.hint_sound {
+                    let sink = rodio::Sink::try_new(&self.audio_handle)
+                        .expect("Failed to create new audio sink.");
+                    let file = BufReader::new(File::open(path).unwrap());
+                    sink.append(rodio::Decoder::new(file).unwrap());
+                    sink.detach()
                 }
 
                 // Outer state is now out of sync with internal state because we have an invisible notification.

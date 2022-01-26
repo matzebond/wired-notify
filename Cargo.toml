@@ -25,3 +25,5 @@ ron = "0.6.0"
 serde_json = "1.0"
 notify = "4.0.15"
 bitflags = "1.2"
+
+rodio = "0.15.0"

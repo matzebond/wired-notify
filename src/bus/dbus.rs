@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU32;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -220,6 +220,7 @@ pub struct Notification {
     pub app_image: Option<DynamicImage>,
     #[serde(skip)]
     pub hint_image: Option<DynamicImage>,
+    pub hint_sound: Option<PathBuf>,
     pub percentage: Option<f32>,
 
     pub urgency: Urgency,
@@ -260,6 +261,7 @@ impl Notification {
             app_image: None,
             hint_image: None,
             percentage: None,
+            hint_sound: None,
 
             urgency: Urgency::Low,
 
@@ -384,6 +386,24 @@ impl Notification {
             hint_image = None;
         }
 
+
+        fn sound_from_path(path: &str) -> PathBuf {
+            Path::new(path).to_owned()
+        }
+
+        fn sound_from_name(name: &str) -> PathBuf {
+            unimplemented!()
+        }
+
+        let hint_sound: Option<PathBuf>;
+        if let Some(sound_path) = hints.get("sound-file") {
+            hint_sound = Some(sound_from_path(sound_path.as_str().unwrap()))
+        } else if let Some(sound_name) = hints.get("sound-name") {
+            hint_sound = Some(sound_from_name(sound_name.as_str().unwrap()))
+        } else {
+            hint_sound = None
+        }
+
         let urgency: Urgency;
         if let Some(level) = arg::prop_cast::<u8>(&hints, "urgency") {
             match *level {
@@ -422,6 +442,7 @@ impl Notification {
             actions: actions_map,
             app_image,
             hint_image,
+            hint_sound,
             urgency,
             percentage,
             time,
